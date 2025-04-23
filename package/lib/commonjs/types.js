@@ -1,0 +1,38 @@
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+exports.ColumnType = void 0;
+let ColumnType = exports.ColumnType = /*#__PURE__*/function (ColumnType) {
+  ColumnType[ColumnType["BOOLEAN"] = 0] = "BOOLEAN";
+  ColumnType[ColumnType["NUMBER"] = 1] = "NUMBER";
+  ColumnType[ColumnType["INT64"] = 2] = "INT64";
+  ColumnType[ColumnType["TEXT"] = 3] = "TEXT";
+  ColumnType[ColumnType["ARRAY_BUFFER"] = 4] = "ARRAY_BUFFER";
+  ColumnType[ColumnType["NULL_VALUE"] = 5] = "NULL_VALUE";
+  return ColumnType;
+}({}); // Passing null/undefined in array types is not possible, so we us a special struct as a workaround.
+/** Used internally to transform the query params into a native format without nullish values */
+/**
+ * Represents a value that can be stored in a SQLite database
+ */
+/**
+ * Allows the execution of bulk of sql commands
+ * inside a transaction
+ * If a single query must be executed many times with different arguments, its preferred
+ * to declare it a single time, and use an array of array parameters.
+ */
+/**
+ * Used internally to transform the batch query commands into a native format without nullish values
+ */
+/**
+ * status: 0 or undefined for correct execution, 1 for error
+ * message: if status === 1, here you will find error description
+ * rowsAffected: Number of affected rows if status == 0
+ */
+/**
+ * Result of loading a file and executing every line as a SQL command
+ * Similar to BatchQueryResult
+ */
+//# sourceMappingURL=types.js.map
