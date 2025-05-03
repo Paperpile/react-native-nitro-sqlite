@@ -20,6 +20,7 @@
 		83BC6E7A2C8F78A200B954D2 /* sqlite3.c in Sources */ = {isa = PBXBuildFile; fileRef = 83BC6E6A2C8F78A200B954D2 /* sqlite3.c */; };
 		83BC6E7B2C8F78A200B954D2 /* sqliteBridge.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 83BC6E6C2C8F78A200B954D2 /* sqliteBridge.cpp */; };
 		83BC6E7F2C8F7BDD00B954D2 /* Empty.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83BC6E7E2C8F7BDD00B954D2 /* Empty.swift */; };
+		FB1907F82DC4C07B00E73BB9 /* offsetsnippet.c in Sources */ = {isa = PBXBuildFile; fileRef = FB1907F62DC4C07B00E73BB9 /* offsetsnippet.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -75,6 +76,8 @@
 		83BC6E6C2C8F78A200B954D2 /* sqliteBridge.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = sqliteBridge.cpp; sourceTree = "<group>"; };
 		83BC6E6D2C8F78A200B954D2 /* sqliteBridge.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqliteBridge.h; sourceTree = "<group>"; };
 		83BC6E7E2C8F7BDD00B954D2 /* Empty.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Empty.swift; sourceTree = "<group>"; };
+		FB1907F62DC4C07B00E73BB9 /* offsetsnippet.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = offsetsnippet.c; sourceTree = "<group>"; };
+		FB1908292DC4C33A00E73BB9 /* offsetsnippet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = offsetsnippet.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -188,6 +191,8 @@
 		83BC6E702C8F78A200B954D2 /* cpp */ = {
 			isa = PBXGroup;
 			children = (
+				FB1908292DC4C33A00E73BB9 /* offsetsnippet.h */,
+				FB1907F62DC4C07B00E73BB9 /* offsetsnippet.c */,
 				83BC6E5F2C8F78A200B954D2 /* specs */,
 				83BC6E602C8F78A200B954D2 /* JSIHelper.cpp */,
 				83BC6E612C8F78A200B954D2 /* JSIHelper.h */,
@@ -277,6 +282,7 @@
 				83BC6E752C8F78A200B954D2 /* HybridSelectQueryResult.cpp in Sources */,
 				83BC6E412C8F788C00B954D2 /* OnLoad.mm in Sources */,
 				83BC6E7A2C8F78A200B954D2 /* sqlite3.c in Sources */,
+				FB1907F82DC4C07B00E73BB9 /* offsetsnippet.c in Sources */,
 				83BC6E742C8F78A200B954D2 /* HybridNitroSQLite.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

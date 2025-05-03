@@ -1,6 +1,7 @@
 #include "operations.hpp"
 #include "logs.hpp"
 #include "utils.hpp"
+#include "offsetsnippet.h"
 #include <NitroModules/ArrayBuffer.hpp>
 #include <cmath>
 #include <ctime>
@@ -34,6 +35,24 @@ void sqliteOpenDb(const std::string& dbName, const std::string& docPath) {
   } else {
     dbMap[dbName] = db;
   }
+
+  // Enable extension loading
+  int rc = sqlite3_enable_load_extension(db, 1);
+  if (rc != SQLITE_OK) {
+    throw NitroSQLiteException(NitroSQLiteExceptionType::DatabaseCannotBeOpened, "Failed to enable extension loading");
+  }
+
+  // Initialize offsetsnippet extension
+  char *pzErrMsg = nullptr;
+  rc = sqlite3_extension_init(db, &pzErrMsg, nullptr);
+  if (rc != SQLITE_OK) {
+    std::string error = pzErrMsg ? std::string(pzErrMsg) : "Unknown error initializing offsetsnippet";
+    sqlite3_free(pzErrMsg);
+    throw NitroSQLiteException(NitroSQLiteExceptionType::DatabaseCannotBeOpened, "Failed to initialize offsetsnippet: " + error);
+  }
+
+  // Disable extension loading for security
+  sqlite3_enable_load_extension(db, 0);
 }
 
 void sqliteCloseDb(const std::string& dbName) {
