@@ -33,6 +33,22 @@ jobs:
           fi
           echo "Package directory verified"
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: |
+          # Install root dependencies (for tsc used by bob)
+          bun install
+          # Install package dependencies
+          cd package && bun install
+
+      - name: Build package
+        run: |
+          cd package
+          bun run build
+          echo "Build completed successfully"
+
       - name: Setup Git
         run: |
           git config user.name "github-actions[bot]"
@@ -40,12 +56,13 @@ jobs:
 
       - name: Update release branch
         run: |
-          # Save package contents to temp directory (including dotfiles)
+          # Save built package contents to temp directory (including dotfiles)
           mkdir -p /tmp/release-content
           cp -r package/. /tmp/release-content/
 
-          # Remove any nested .git if it exists
+          # Remove dev artifacts not needed for distribution
           rm -rf /tmp/release-content/.git
+          rm -rf /tmp/release-content/node_modules
 
           # Check if release branch exists remotely
           if git ls-remote --heads origin paperpile/release | grep -q paperpile/release; then
@@ -62,7 +79,7 @@ jobs:
             git clean -fd || true
           fi
 
-          # Copy package contents to root (including dotfiles)
+          # Copy built package contents to root (including dotfiles)
           cp -r /tmp/release-content/. .
 
           # Stage all files
@@ -74,7 +91,8 @@ jobs:
           else
             git commit -m "Release: sync from paperpile/custom-extension
 
-            Source commit: ${{ github.sha }}"
+            Source commit: ${{ github.sha }}
+            Built with: bun run build"
             git push origin paperpile/release --force
             echo "Release branch updated successfully"
           fi
@@ -86,3 +104,4 @@ jobs:
           echo "- Source branch: paperpile/custom-extension" >> $GITHUB_STEP_SUMMARY
           echo "- Source commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- Release branch: paperpile/release" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: ✅ Successful" >> $GITHUB_STEP_SUMMARY
