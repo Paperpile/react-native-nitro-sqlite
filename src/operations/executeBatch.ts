@@ -3,42 +3,62 @@ import {
   replaceWithNativeNullValue,
 } from '../nullHandling'
 import { HybridNitroSQLite } from '../nitro'
+import {
+  queueOperationAsync,
+  startOperationSync,
+  throwIfDatabaseIsNotOpen,
+} from '../DatabaseQueue'
 import type {
   NativeSQLiteQueryParams,
   BatchQueryResult,
   BatchQueryCommand,
   NativeBatchQueryCommand,
 } from '../types'
+import NitroSQLiteError from '../NitroSQLiteError'
 
 export function executeBatch(
   dbName: string,
-  commands: BatchQueryCommand[]
+  commands: BatchQueryCommand[],
 ): BatchQueryResult {
+  throwIfDatabaseIsNotOpen(dbName)
+
   const transformedCommands = isSimpleNullHandlingEnabled()
     ? toNativeBatchQueryCommands(commands)
     : (commands as NativeBatchQueryCommand[])
 
-  const result = HybridNitroSQLite.executeBatch(dbName, transformedCommands)
-  return result
+  try {
+    return startOperationSync(dbName, () =>
+      HybridNitroSQLite.executeBatch(dbName, transformedCommands),
+    )
+  } catch (error) {
+    throw NitroSQLiteError.fromError(error)
+  }
 }
 
 export async function executeBatchAsync(
   dbName: string,
-  commands: BatchQueryCommand[]
+  commands: BatchQueryCommand[],
 ): Promise<BatchQueryResult> {
+  throwIfDatabaseIsNotOpen(dbName)
+
   const transformedCommands = isSimpleNullHandlingEnabled()
     ? toNativeBatchQueryCommands(commands)
     : (commands as NativeBatchQueryCommand[])
 
-  const result = await HybridNitroSQLite.executeBatchAsync(
-    dbName,
-    transformedCommands
-  )
-  return result
+  return queueOperationAsync(dbName, async () => {
+    try {
+      return await HybridNitroSQLite.executeBatchAsync(
+        dbName,
+        transformedCommands,
+      )
+    } catch (error) {
+      throw NitroSQLiteError.fromError(error)
+    }
+  })
 }
 
 function toNativeBatchQueryCommands(
-  commands: BatchQueryCommand[]
+  commands: BatchQueryCommand[],
 ): NativeBatchQueryCommand[] {
   return commands.map((command) => {
     const transformedParams = command.params?.map((param) => {

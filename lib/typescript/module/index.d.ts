@@ -1,12 +1,10 @@
 import { open } from './operations/session';
 import { execute, executeAsync } from './operations/execute';
 import { executeBatch, executeBatchAsync } from './operations/executeBatch';
-export type * from './types';
-export { typeORMDriver } from './typeORM';
 export declare const NitroSQLite: {
     native: import("./specs/NitroSQLite.nitro").NitroSQLite;
     open: typeof open;
-    transaction: (dbName: string, fn: (tx: import("./types").Transaction) => Promise<void> | void) => Promise<void>;
+    transaction: <Result = void>(dbName: string, transactionCallback: (tx: import("./types").Transaction) => Promise<Result>, isExclusive?: boolean) => Promise<Result>;
     execute: typeof execute;
     executeAsync: typeof executeAsync;
     executeBatch: typeof executeBatch;
@@ -29,4 +27,7 @@ export declare const NitroSQLite: {
 };
 export { open } from './operations/session';
 export { isNitroSQLiteNull, NITRO_SQLITE_NULL, isSimpleNullHandlingEnabled, enableSimpleNullHandling, } from './nullHandling';
+export { default as NitroSQLiteError } from './NitroSQLiteError';
+export type * from './types';
+export { typeORMDriver } from './typeORM';
 //# sourceMappingURL=index.d.ts.map

@@ -8,45 +8,53 @@ import type {
   SQLiteQueryParams,
   QueryResultRow,
 } from '../types'
+import NitroSQLiteError from '../NitroSQLiteError'
 
 export function execute<Row extends QueryResultRow = never>(
   dbName: string,
   query: string,
-  params?: SQLiteQueryParams
+  params?: SQLiteQueryParams,
 ): QueryResult<Row> {
   const transformedParams = isSimpleNullHandlingEnabled()
     ? toNativeQueryParams(params)
     : (params as NativeSQLiteQueryParams)
 
-  const nativeResult = HybridNitroSQLite.execute(
-    dbName,
-    query,
-    transformedParams
-  )
-  const result = buildJsQueryResult<Row>(nativeResult)
-  return result
+  try {
+    const nativeResult = HybridNitroSQLite.execute(
+      dbName,
+      query,
+      transformedParams,
+    )
+
+    return buildJsQueryResult<Row>(nativeResult)
+  } catch (error) {
+    throw NitroSQLiteError.fromError(error)
+  }
 }
 
 export async function executeAsync<Row extends QueryResultRow = never>(
   dbName: string,
   query: string,
-  params?: SQLiteQueryParams
+  params?: SQLiteQueryParams,
 ): Promise<QueryResult<Row>> {
   const transformedParams = isSimpleNullHandlingEnabled()
     ? toNativeQueryParams(params)
     : (params as NativeSQLiteQueryParams)
 
-  const nativeResult = await HybridNitroSQLite.executeAsync(
-    dbName,
-    query,
-    transformedParams
-  )
-  const result = buildJsQueryResult<Row>(nativeResult)
-  return result
+  try {
+    const nativeResult = await HybridNitroSQLite.executeAsync(
+      dbName,
+      query,
+      transformedParams,
+    )
+    return buildJsQueryResult<Row>(nativeResult)
+  } catch (error) {
+    throw NitroSQLiteError.fromError(error)
+  }
 }
 
 function toNativeQueryParams(
-  params: SQLiteQueryParams | undefined
+  params: SQLiteQueryParams | undefined,
 ): NativeSQLiteQueryParams | undefined {
   return params?.map((param) => replaceWithNativeNullValue(param))
 }
@@ -66,8 +74,8 @@ function buildJsQueryResult<Row extends QueryResultRow = never>({
             return [key, null]
           }
           return [key, value]
-        })
-      )
+        }),
+      ),
     ) as Row[]
   }
 
