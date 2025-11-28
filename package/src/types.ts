@@ -8,7 +8,9 @@ export interface NitroSQLiteConnection {
   delete(): void
   attach(dbNameToAttach: string, alias: string, location?: string): void
   detach(alias: string): void
-  transaction(fn: (tx: Transaction) => Promise<void> | void): Promise<void>
+  transaction: <Result = void>(
+    transactionCallback: (tx: Transaction) => Promise<Result>,
+  ) => Promise<Result>
   execute: ExecuteQuery
   executeAsync: ExecuteAsyncQuery
   executeBatch(commands: BatchQueryCommand[]): BatchQueryResult
@@ -68,12 +70,12 @@ export interface QueryResult<Row extends QueryResultRow = QueryResultRow> {
 
 export type ExecuteQuery = <Row extends QueryResultRow = QueryResultRow>(
   query: string,
-  params?: SQLiteQueryParams
+  params?: SQLiteQueryParams,
 ) => QueryResult<Row>
 
 export type ExecuteAsyncQuery = <Row extends QueryResultRow = QueryResultRow>(
   query: string,
-  params?: SQLiteQueryParams
+  params?: SQLiteQueryParams,
 ) => Promise<QueryResult<Row>>
 
 export interface Transaction {

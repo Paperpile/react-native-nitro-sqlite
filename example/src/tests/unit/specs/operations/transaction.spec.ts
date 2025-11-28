@@ -1,199 +1,27 @@
-import Chance from 'chance'
 import {
-  type NitroSQLiteConnection,
-  type BatchQueryCommand,
-  NITRO_SQLITE_NULL,
-  enableSimpleNullHandling,
-} from 'react-native-nitro-sqlite'
-import { beforeEach, describe, it } from './MochaRNAdapter'
-import chai from 'chai'
-import { testDb as testDbInternal, resetTestDb } from './db'
-import { User } from '../model/User'
+  chance,
+  expect,
+  isNitroSQLiteError,
+  TEST_ERROR,
+  TEST_ERROR_MESSAGE,
+  TEST_ERROR_CODES,
+} from '../../common'
+import { describe, it } from '../../../MochaRNAdapter'
+import type { User } from '../../../../model/User'
+import { testDb } from '../../../db'
 
-function isError(e: unknown): e is Error {
-  return e instanceof Error
-}
-
-const expect = chai.expect
-const chance = new Chance()
-
-export function registerUnitTests() {
-  let testDb: NitroSQLiteConnection
-
-  beforeEach(() => {
-    enableSimpleNullHandling(false)
-
-    try {
-      resetTestDb()
-
-      if (testDbInternal == null)
-        throw new Error('Failed to reset test database')
-
-      testDbInternal.execute('DROP TABLE IF EXISTS User;')
-      testDbInternal.execute(
-        'CREATE TABLE User ( id REAL PRIMARY KEY, name TEXT NOT NULL, age REAL, networth REAL) STRICT;'
-      )
-
-      testDb = testDbInternal!
-    } catch (e) {
-      console.warn('Error resetting user database', e)
-    }
-  })
-
-  describe('Raw queries', () => {
-    it('Insert', () => {
-      const id = chance.integer()
-      const name = chance.name()
-      const age = chance.integer()
-      const networth = chance.floating()
-      const res = testDb.execute(
-        'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-        [id, name, age, networth]
-      )
-
-      expect(res.rowsAffected).to.equal(1)
-      expect(res.insertId).to.equal(1)
-      expect(res.rows?._array).to.eql([])
-      expect(res.rows?.length).to.equal(0)
-      expect(res.rows?.item).to.be.a('function')
-    })
-
-    it('Insert with null', () => {
-      const id = chance.integer()
-      const name = chance.name()
-      const age = NITRO_SQLITE_NULL
-      const networth = NITRO_SQLITE_NULL
-      const res = testDb.execute(
-        'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-        [id, name, age, networth]
-      )
-
-      expect(res.rowsAffected).to.equal(1)
-      expect(res.insertId).to.equal(1)
-      expect(res.rows?._array).to.eql([])
-      expect(res.rows?.length).to.equal(0)
-      expect(res.rows?.item).to.be.a('function')
-
-      const selectRes = testDb.execute('SELECT * FROM User')
-      expect(selectRes.rows?._array).to.eql([
-        {
-          id,
-          name,
-          age,
-          networth,
-        },
-      ])
-    })
-
-    it('Insert with null (simple null handling)', () => {
-      enableSimpleNullHandling(true)
-
-      const id = chance.integer()
-      const name = chance.name()
-      const age = undefined
-      const networth = null
-      const res = testDb.execute(
-        'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-        [id, name, age, networth]
-      )
-
-      expect(res.rowsAffected).to.equal(1)
-      expect(res.insertId).to.equal(1)
-      expect(res.rows?._array).to.eql([])
-      expect(res.rows?.length).to.equal(0)
-      expect(res.rows?.item).to.be.a('function')
-
-      const selectRes = testDb.execute('SELECT * FROM User')
-      expect(selectRes.rows?._array).to.eql([
-        {
-          id,
-          name,
-          age: null,
-          networth: null,
-        },
-      ])
-    })
-
-    it('Query without params', () => {
-      const id = chance.integer()
-      const name = chance.name()
-      const age = chance.integer()
-      const networth = chance.floating()
-      testDb.execute(
-        'INSERT INTO User (id, name, age, networth) VALUES(?, ?, ?, ?)',
-        [id, name, age, networth]
-      )
-
-      const res = testDb.execute('SELECT * FROM User')
-
-      expect(res.rowsAffected).to.equal(1)
-      expect(res.insertId).to.equal(1)
-      expect(res.rows?._array).to.eql([
-        {
-          id,
-          name,
-          age,
-          networth,
-        },
-      ])
-    })
-
-    it('Query with params', () => {
-      const id = chance.integer()
-      const name = chance.name()
-      const age = chance.integer()
-      const networth = chance.floating()
-      testDb.execute(
-        'INSERT INTO User (id, name, age, networth) VALUES(?, ?, ?, ?)',
-        [id, name, age, networth]
-      )
-
-      const res = testDb.execute('SELECT * FROM User WHERE id = ?', [id])
-
-      expect(res.rowsAffected).to.equal(1)
-      expect(res.insertId).to.equal(1)
-      expect(res.rows?._array).to.eql([
-        {
-          id,
-          name,
-          age,
-          networth,
-        },
-      ])
-    })
-
-    it('Failed insert', () => {
-      const id = chance.integer()
-      const name = chance.name()
-      const age = chance.string()
-      const networth = chance.string()
-
-      try {
-        testDb.execute(
-          'INSERT INTO User (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          [id, name, age, networth]
-        )
-      } catch (e: unknown) {
-        if (isError(e)) {
-          expect(e.message).to.include(
-            'cannot store TEXT value in REAL column User.age'
-          )
-        } else {
-          expect.fail('Should have thrown a valid NitroSQLiteException')
-        }
-      }
-    })
-
+export default function registerTransactionUnitTests() {
+  describe('transaction', () => {
     it('Transaction, auto commit', async () => {
       const id = chance.integer()
       const name = chance.name()
       const age = chance.integer()
       const networth = chance.floating()
 
-      await testDb.transaction((tx) => {
+      await testDb.transaction(async (tx) => {
         const res = tx.execute(
           'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          [id, name, age, networth]
+          [id, name, age, networth],
         )
 
         expect(res.rowsAffected).to.equal(1)
@@ -220,10 +48,10 @@ export function registerUnitTests() {
       const age = chance.integer()
       const networth = chance.floating()
 
-      await testDb.transaction((tx) => {
+      await testDb.transaction(async (tx) => {
         const res = tx.execute(
           'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          [id, name, age, networth]
+          [id, name, age, networth],
         )
 
         expect(res.rowsAffected).to.equal(1)
@@ -259,25 +87,25 @@ export function registerUnitTests() {
       // ACT: Start multiple transactions to upsert and select the same record
       const promises = []
       for (let iteration = 1; iteration <= iterations; iteration++) {
-        const promised = testDb.transaction((tx) => {
+        const promised = testDb.transaction(async (tx) => {
           // ACT: Upsert statement to create record / increment the value
           tx.execute(
             `
-              INSERT OR REPLACE INTO [User] ([id], [name], [age], [networth])
-              SELECT ?, ?, ?,
-                IFNULL((
-                  SELECT [networth] + 1000
-                  FROM [User]
-                  WHERE [id] = ?
-                ), 0)
-          `,
-            [id, name, age, id]
+            INSERT OR REPLACE INTO [User] ([id], [name], [age], [networth])
+            SELECT ?, ?, ?,
+              IFNULL((
+                SELECT [networth] + 1000
+                FROM [User]
+                WHERE [id] = ?
+              ), 0)
+        `,
+            [id, name, age, id],
           )
 
           // ACT: Select statement to get incremented value and store it for checking later
           const results = tx.execute(
             'SELECT [networth] FROM [User] WHERE [id] = ?',
-            [id]
+            [id],
           )
 
           const row = results.rows?._array[0] as User | undefined
@@ -296,7 +124,7 @@ export function registerUnitTests() {
         .map((_, index) => index * 1000)
       expect(actual).to.eql(
         expected,
-        'Each transaction should read a different value'
+        'Each transaction should read a different value',
       )
     })
 
@@ -306,10 +134,10 @@ export function registerUnitTests() {
       const age = chance.integer()
       const networth = chance.floating()
 
-      await testDb.transaction((tx) => {
+      await testDb.transaction(async (tx) => {
         const res = tx.execute(
           'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          [id, name, age, networth]
+          [id, name, age, networth],
         )
 
         expect(res.rowsAffected).to.equal(1)
@@ -344,13 +172,13 @@ export function registerUnitTests() {
       const age = chance.integer()
       const networth = chance.floating()
 
-      await testDb.transaction((tx) => {
+      await testDb.transaction(async (tx) => {
         try {
           tx.execute(
             'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-            [id, name, age, networth]
+            [id, name, age, networth],
           )
-        } catch (e) {
+        } catch {
           tx.rollback()
         }
       })
@@ -359,31 +187,16 @@ export function registerUnitTests() {
       expect(res.rows?._array).to.eql([])
     })
 
-    it('Correctly throws', () => {
-      const id = chance.string()
-      const name = chance.name()
-      const age = chance.integer()
-      const networth = chance.floating()
-      try {
-        testDb.execute(
-          'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          [id, name, age, networth]
-        )
-      } catch (e: unknown) {
-        expect(e).to.not.equal(undefined)
-      }
-    })
-
     it('Rollback', async () => {
       const id = chance.integer()
       const name = chance.name()
       const age = chance.integer()
       const networth = chance.floating()
 
-      await testDb.transaction((tx) => {
+      await testDb.transaction(async (tx) => {
         tx.execute(
           'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          [id, name, age, networth]
+          [id, name, age, networth],
         )
         tx.rollback()
         const res = testDb.execute('SELECT * FROM User')
@@ -392,34 +205,35 @@ export function registerUnitTests() {
     })
 
     it('Transaction, rejects on callback error', async () => {
-      const promised = testDb.transaction(() => {
-        throw new Error('Error from callback')
+      const promised = testDb.transaction(async () => {
+        throw TEST_ERROR
       })
 
       // ASSERT: should return a promise that eventually rejects
       expect(promised).to.have.property('then').that.is.a('function')
       try {
         await promised
-        expect.fail('Should not resolve')
+        expect.fail(TEST_ERROR_CODES.EXPECT_PROMISE_REJECTION)
       } catch (e) {
-        if (isError(e)) expect(e.message).to.equal('Error from callback')
-        else expect.fail('Should have thrown a valid NitroSQLiteException')
+        if (isNitroSQLiteError(e))
+          expect(e.message).to.include(TEST_ERROR_MESSAGE)
+        else expect.fail(TEST_ERROR_CODES.EXPECT_NITRO_SQLITE_ERROR)
       }
     })
 
     it('Transaction, rejects on invalid query', async () => {
-      const promised = testDb.transaction((tx) => {
+      const promised = testDb.transaction(async (tx) => {
         tx.execute('SELECT * FROM [tableThatDoesNotExist];')
       })
       // ASSERT: should return a promise that eventually rejects
       expect(promised).to.have.property('then').that.is.a('function')
       try {
         await promised
-        expect.fail('Should not resolve')
+        expect.fail(TEST_ERROR_CODES.EXPECT_PROMISE_REJECTION)
       } catch (e) {
-        if (isError(e))
+        if (isNitroSQLiteError(e))
           expect(e.message).to.include('no such table: tableThatDoesNotExist')
-        else expect.fail('Should have thrown a valid NitroSQLiteException')
+        else expect.fail(TEST_ERROR_CODES.EXPECT_NITRO_SQLITE_ERROR)
       }
     })
 
@@ -448,7 +262,7 @@ export function registerUnitTests() {
       await testDb.transaction(async (tx) => {
         const res = await tx.executeAsync(
           'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          [id, name, age, networth]
+          [id, name, age, networth],
         )
 
         expect(res.rowsAffected).to.equal(1)
@@ -479,11 +293,11 @@ export function registerUnitTests() {
         await testDb.transaction(async (tx) => {
           await tx.executeAsync(
             'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-            [id, name, age, networth]
+            [id, name, age, networth],
           )
         })
       } catch (e) {
-        if (isError(e)) {
+        if (isNitroSQLiteError(e)) {
           expect(e.message)
             .to.include('SqlExecutionError')
             .and.to.include('cannot store TEXT value in REAL column User.id')
@@ -491,7 +305,7 @@ export function registerUnitTests() {
           const res = testDb.execute('SELECT * FROM User')
           expect(res.rows?._array).to.eql([])
         } else {
-          expect.fail('Should have thrown a valid NitroSQLiteException')
+          expect.fail(TEST_ERROR_CODES.EXPECT_NITRO_SQLITE_ERROR)
         }
       }
     })
@@ -505,7 +319,7 @@ export function registerUnitTests() {
       await testDb.transaction(async (tx) => {
         await tx.executeAsync(
           'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          [id, name, age, networth]
+          [id, name, age, networth],
         )
         tx.commit()
       })
@@ -530,7 +344,7 @@ export function registerUnitTests() {
       await testDb.transaction(async (tx) => {
         await tx.executeAsync(
           'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          [id, name, age, networth]
+          [id, name, age, networth],
         )
         tx.rollback()
       })
@@ -556,21 +370,21 @@ export function registerUnitTests() {
           // ACT: Upsert statement to create record / increment the value
           await tx.executeAsync(
             `
-              INSERT OR REPLACE INTO [User] ([id], [name], [age], [networth])
-              SELECT ?, ?, ?,
-                IFNULL((
-                  SELECT [networth] + 1000
-                  FROM [User]
-                  WHERE [id] = ?
-                ), 0)
-          `,
-            [id, name, age, id]
+            INSERT OR REPLACE INTO [User] ([id], [name], [age], [networth])
+            SELECT ?, ?, ?,
+              IFNULL((
+                SELECT [networth] + 1000
+                FROM [User]
+                WHERE [id] = ?
+              ), 0)
+        `,
+            [id, name, age, id],
           )
 
           // ACT: Select statement to get incremented value and store it for checking later
           const results = await tx.executeAsync(
             'SELECT [networth] FROM [User] WHERE [id] = ?',
-            [id]
+            [id],
           )
 
           const row = results.rows?._array[0] as User | undefined
@@ -589,23 +403,24 @@ export function registerUnitTests() {
         .map((_, index) => index * 1000)
       expect(actual).to.eql(
         expected,
-        'Each transaction should read a different value'
+        'Each transaction should read a different value',
       )
     })
 
     it('Async transaction, rejects on callback error', async () => {
       const promised = testDb.transaction(() => {
-        throw new Error('Error from callback')
+        throw new Error(TEST_ERROR_MESSAGE)
       })
 
       // ASSERT: should return a promise that eventually rejects
       expect(promised).to.have.property('then').that.is.a('function')
       try {
         await promised
-        expect.fail('Should not resolve')
+        expect.fail(TEST_ERROR_CODES.EXPECT_PROMISE_REJECTION)
       } catch (e) {
-        if (isError(e)) expect(e.message).to.equal('Error from callback')
-        else expect.fail('Should have thrown a valid NitroSQLiteException')
+        if (isNitroSQLiteError(e))
+          expect(e.message).to.include(TEST_ERROR_MESSAGE)
+        else expect.fail(TEST_ERROR_CODES.EXPECT_NITRO_SQLITE_ERROR)
       }
     })
 
@@ -618,85 +433,12 @@ export function registerUnitTests() {
       expect(promised).to.have.property('then').that.is.a('function')
       try {
         await promised
-        expect.fail('Should not resolve')
+        expect.fail(TEST_ERROR_CODES.EXPECT_PROMISE_REJECTION)
       } catch (e) {
-        if (isError(e))
+        if (isNitroSQLiteError(e))
           expect(e.message).to.include('no such table: tableThatDoesNotExist')
-        else expect.fail('Should have thrown a valid NitroSQLiteException')
+        else expect.fail(TEST_ERROR_CODES.EXPECT_NITRO_SQLITE_ERROR)
       }
-    })
-
-    it('Batch execute', () => {
-      const id1 = chance.integer()
-      const name1 = chance.name()
-      const age1 = chance.integer()
-      const networth1 = chance.floating()
-
-      const id2 = chance.integer()
-      const name2 = chance.name()
-      const age2 = chance.integer()
-      const networth2 = chance.floating()
-      const commands: BatchQueryCommand[] = [
-        {
-          query:
-            'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          params: [id1, name1, age1, networth1],
-        },
-        {
-          query:
-            'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          params: [id2, name2, age2, networth2],
-        },
-      ]
-
-      testDb.executeBatch(commands)
-
-      const res = testDb.execute('SELECT * FROM User')
-      expect(res.rows?._array).to.eql([
-        { id: id1, name: name1, age: age1, networth: networth1 },
-        {
-          id: id2,
-          name: name2,
-          age: age2,
-          networth: networth2,
-        },
-      ])
-    })
-
-    it('Async batch execute', async () => {
-      const id1 = chance.integer()
-      const name1 = chance.name()
-      const age1 = chance.integer()
-      const networth1 = chance.floating()
-      const id2 = chance.integer()
-      const name2 = chance.name()
-      const age2 = chance.integer()
-      const networth2 = chance.floating()
-      const commands: BatchQueryCommand[] = [
-        {
-          query:
-            'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          params: [id1, name1, age1, networth1],
-        },
-        {
-          query:
-            'INSERT INTO "User" (id, name, age, networth) VALUES(?, ?, ?, ?)',
-          params: [id2, name2, age2, networth2],
-        },
-      ]
-
-      await testDb.executeBatchAsync(commands)
-
-      const res = testDb.execute('SELECT * FROM User')
-      expect(res.rows?._array).to.eql([
-        { id: id1, name: name1, age: age1, networth: networth1 },
-        {
-          id: id2,
-          name: name2,
-          age: age2,
-          networth: networth2,
-        },
-      ])
     })
   })
 }
