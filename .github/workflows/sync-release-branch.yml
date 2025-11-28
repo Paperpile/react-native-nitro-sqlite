@@ -1,0 +1,88 @@
+name: Sync Release Branch
+
+on:
+  push:
+    branches:
+      - paperpile/custom-extension
+    paths:
+      - 'package/**'
+  workflow_dispatch: # Allow manual trigger
+
+concurrency:
+  group: sync-release-branch
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  sync-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          ref: paperpile/custom-extension
+          fetch-depth: 0
+
+      - name: Verify package directory exists
+        run: |
+          if [ ! -d "package" ] || [ ! -f "package/package.json" ]; then
+            echo "Error: package directory or package.json not found"
+            exit 1
+          fi
+          echo "Package directory verified"
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update release branch
+        run: |
+          # Save package contents to temp directory (including dotfiles)
+          mkdir -p /tmp/release-content
+          cp -r package/. /tmp/release-content/
+
+          # Remove any nested .git if it exists
+          rm -rf /tmp/release-content/.git
+
+          # Check if release branch exists remotely
+          if git ls-remote --heads origin paperpile/release | grep -q paperpile/release; then
+            echo "Release branch exists, checking out..."
+            git checkout paperpile/release
+            # Remove all tracked files
+            git rm -rf . || true
+            # Remove untracked files
+            git clean -fd || true
+          else
+            echo "Creating new orphan release branch..."
+            git checkout --orphan paperpile/release
+            git rm -rf . || true
+            git clean -fd || true
+          fi
+
+          # Copy package contents to root (including dotfiles)
+          cp -r /tmp/release-content/. .
+
+          # Stage all files
+          git add -A
+
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Release: sync from paperpile/custom-extension
+
+            Source commit: ${{ github.sha }}"
+            git push origin paperpile/release --force
+            echo "Release branch updated successfully"
+          fi
+
+      - name: Summary
+        run: |
+          echo "## Release Branch Sync Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Source branch: paperpile/custom-extension" >> $GITHUB_STEP_SUMMARY
+          echo "- Source commit: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Release branch: paperpile/release" >> $GITHUB_STEP_SUMMARY
