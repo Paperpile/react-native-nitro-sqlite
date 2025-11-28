@@ -1,6 +1,19 @@
 # Paperpile Fork
 
-> This is Paperpile's fork of `react-native-nitro-sqlite` with custom extensions.
+> This is Paperpile's fork of `react-native-nitro-sqlite` with a custom SQLite FTS extension.
+
+## Why We Forked
+
+We use a custom SQLite FTS extension (`offsetsnippet.c`) for library search. Initially, we tried loading it dynamically at runtime using `loadExtension` ([PR #175](https://github.com/margelo/react-native-nitro-sqlite/pull/175) - contributed by us), but this failed on iOS physical devices due to platform restrictions on `.dylib` files.
+
+**Solution:** We now statically compile the extension into SQLite by:
+1. Adding `offsetsnippet.c` to the forked repo
+2. Defining `SQLITE_CORE` macro during build
+
+| Platform | Configuration |
+|----------|---------------|
+| iOS | `Podfile`: `config.build_settings['GCC_PREPROCESSOR_DEFINITIONS'] << 'SQLITE_CORE=1'` |
+| Android | `gradle.properties`: `nitroSqliteFlags=-DSQLITE_ENABLE_FTS5 -DSQLITE_CORE` |
 
 ## Branch Structure
 
