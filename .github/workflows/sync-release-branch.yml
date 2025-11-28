@@ -54,7 +54,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Update release branch
+      - name: Prepare release content
         run: |
           # Save built package contents to temp directory (including dotfiles)
           mkdir -p /tmp/release-content
@@ -63,6 +63,12 @@ jobs:
           # Remove dev artifacts not needed for distribution
           rm -rf /tmp/release-content/.git
           rm -rf /tmp/release-content/node_modules
+
+      - name: Update release branch
+        run: |
+          # Clean ALL local changes (from bun install) before switching branches
+          git checkout -- .
+          git clean -fd
 
           # Check if release branch exists remotely
           if git ls-remote --heads origin paperpile/release | grep -q paperpile/release; then
